@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BOND - Share How You Feel</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #map {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            z-index: 1;
+            pointer-events: auto;
+        }
+
+        .leaflet-heatmap-layer {
+        <!-- pointer-events: none; -->
+        }
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px 30px;
+            z-index: 1000;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 30px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-number {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .note-popup {
+            min-width: 250px;
+            max-width: 350px;
+        }
+
+        .note-content {
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+        }
+
+        .note-feeling {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .note-meta {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 15px;
+        }
+
+        .note-actions {
+            display: flex;
+            gap: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #eee;
+        }
+
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 100px;
+            transition: border-color 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .thread {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .reply {
+            background: #f8f8f8;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            position: relative;
+            animation: fadeInReply 0.3s ease;
+        }
+
+        @keyframes fadeInReply {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .reply-content {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .reply-meta {
+            font-size: 11px;
+            color: #999;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .report-count {
+            color: #e74c3c;
+            font-size: 11px;
+        }
+
+        .fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+            z-index: 1500;
+        }
+
+        .fab:hover {
+            transform: scale(1.1) rotate(90deg);
+            box-shadow: 0 8px 30px rgba(102, 126, 234, 0.6);
+        }
+
+        .emoji-mood {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+
+        .instructions {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 15px;
+            max-width: 300px;
+            z-index: 1500;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .instructions h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .instructions p {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .close-instructions {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .heat-legend {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 10px;
+            z-index: 1500;
+        }
+
+        .heat-legend h4 {
+            font-size: 12px;
+            margin-bottom: 10px;
+            color: #666;
+        }
+
+        .heat-bar {
+            width: 100px;
+            height: 20px;
+            background: linear-gradient(90deg, 
+                rgba(102, 126, 234, 0.2) 0%, 
+                rgba(102, 126, 234, 0.5) 50%, 
+                rgba(118, 75, 162, 0.8) 100%);
+            border-radius: 10px;
+            margin-bottom: 5px;
+        }
+
+        .heat-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #999;
+        }
+
+
+
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            <span>💜</span>
+            <span>BOND</span>
+        </div>
+        <div class="stats">
+            <div class="stat">
+                <span class="stat-number" id="noteCount">0</span>
+                <span>Feelings Shared</span>
+            </div>
+            <div class="stat">
+                <span class="stat-number" id="connectionCount">0</span>
+                <span>Bonds Formed</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <div class="instructions" id="instructions">
+        <button class="close-instructions" onclick="closeInstructions()">×</button>
+        <h3>Welcome to BOND 💜</h3>
+        <p>Click anywhere on the map to share how you're feeling, all anonymously. Connect with others around the world through shared emotions and experiences.</p>
+        <p>• Purple areas show where many people are sharing</p>
+        <p>• Click on feelings to read and reply to notes</p>
+        <p>• Help keep our space hate-free by reporting harmful content</p>
+        <p>• Remember, you are never alone.</p>
+    </div>
+
+    <div class="heat-legend">
+        <h4>FEELINGS ACTIVITY</h4>
+        <div class="heat-bar"></div>
+        <div class="heat-labels">
+            <span>Low</span>
+            <span>Medium</span>
+            <span>High</span>
+        </div>
+    </div>
+
+    <button class="fab" onclick="showRandomNote()" title="Discover a random note">
+        🎲
+    </button>
+
+    <div class="modal" id="newNoteModal">
+        <div class="modal-content">
+            <div class="modal-header">What's on your mind?</div>
+            <textarea id="feelingInput" placeholder="Share your thoughts, feelings, or what's on your mind. This is a safe space to be yourself..."></textarea>
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="saveNote()">Share Anonymously</button>
+                <button class="btn btn-secondary" onclick="closeModal('newNoteModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="threadModal">
+        <div class="modal-content">
+            <div class="modal-header">Connection Thread</div>
+            <div id="originalNote"></div>
+            <div class="thread" id="threadContent"></div>
+            <textarea id="replyInput" placeholder="Share your thoughts or support..."></textarea>
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="addReply()">Reply Anonymously</button>
+                <button class="btn btn-secondary" onclick="closeModal('threadModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+
+
+        // Initialize map
+        const map = L.map('map').setView([30, 0], 2);
+        
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 18
+        }).addTo(map);
+
+
+        // Store for notes and heat data
+        let notes = [];
+        let heatData = [];
+        let currentNoteId = null;
+        let connections = 0;
+        let currentLat, currentLng;
+
+        // Initialize with some sample data
+        const sampleNotes = [
+            { lat: 40.7128, lng: -74.0060, feeling: "Feeling hopeful today despite everything. The sunrise was beautiful.", mood: "😊", replies: [] },
+            { lat: 51.5074, lng: -0.1278, feeling: "Struggling with loneliness but trying to stay positive.", mood: "😔", replies: [] },
+            { lat: 35.6762, lng: 139.6503, feeling: "Grateful for small moments of peace in a busy world.", mood: "🙏", replies: [] },
+            { lat: -33.8688, lng: 151.2093, feeling: "Excited about new beginnings but also scared.", mood: "😰", replies: [] },
+            { lat: 48.8566, lng: 2.3522, feeling: "Finding beauty in unexpected places today.", mood: "💜", replies: [] }
+        ];
+
+        // Add sample notes to map
+        sampleNotes.forEach(note => {
+            note.id = Date.now() + Math.random();
+            note.timestamp = new Date().toLocaleString();
+            note.reports = 0;
+            notes.push(note);
+            addNoteToMap(note);
+        });
+
+
+        // Add heat layer
+        let heat = L.heatLayer([], {
+            radius: 25,
+            blur: 15,
+            maxZoom: 10,
+            gradient: {
+                0.0: 'rgba(102, 126, 234, 0)',
+                0.2: 'rgba(102, 126, 234, 0.2)',
+                0.4: 'rgba(102, 126, 234, 0.4)',
+                0.6: 'rgba(118, 75, 162, 0.6)',
+                0.8: 'rgba(118, 75, 162, 0.8)',
+                1.0: 'rgba(118, 75, 162, 1)'
+            }
+        }).addTo(map);
+
+        updateStats();
+        updateHeatmap();
+
+
+
+        // Click on map to add note
+        map.on('click', function(e) {
+            console.log("Map clicked at:", e.latlng);
+            currentLat = e.latlng.lat;
+            currentLng = e.latlng.lng;
+            document.getElementById('newNoteModal').style.display = 'flex';
+            document.getElementById('feelingInput').focus();
+        });
+
+        function addNoteToMap(note) {
+            const marker = L.marker([note.lat, note.lng], {
+                icon: L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div style="background: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(0,0,0,0.2); border: 2px solid #667eea; font-size: 16px;">${note.mood || '💜'}</div>`,
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15]
+                })
+            }).addTo(map);
+
+            marker.bindPopup(createPopupContent(note));
+            
+            // Add to heat data
+            heatData.push([note.lat, note.lng, 1]);
+        }
+
+        function createPopupContent(note) {
+            const replyCount = note.replies ? note.replies.length : 0;
+            return `
+                <div class="note-content">
+                    <div class="note-feeling">${note.feeling}</div>
+                    <div class="note-meta">${note.timestamp} • ${replyCount} replies</div>
+                    <div class="note-actions">
+                        <button class="btn btn-primary" onclick="openThread('${note.id}')">Bond</button>
+                        <button class="btn btn-secondary" onclick="reportNote('${note.id}')">Report</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function saveNote() {
+            const feeling = document.getElementById('feelingInput').value.trim();
+            if (!feeling) return;
+
+            const moods = ['😊', '😔', '💜', '🙏', '✨', '🌟', '💭', '🌈'];
+            const note = {
+                id: Date.now() + Math.random(),
+                lat: currentLat,
+                lng: currentLng,
+                feeling: feeling,
+                mood: moods[Math.floor(Math.random() * moods.length)],
+                timestamp: new Date().toLocaleString(),
+                replies: [],
+                reports: 0
+            };
+
+            notes.push(note);
+            addNoteToMap(note);
+
+            
+            document.getElementById('feelingInput').value = '';
+            closeModal('newNoteModal');
+        }
+
+        function openThread(noteId) {
+            const note = notes.find(n => n.id == noteId);
+            if (!note) return;
+
+            currentNoteId = noteId;
+            
+            document.getElementById('originalNote').innerHTML = `
+                <div style="background: #f8f8f8; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
+                    <div style="font-size: 16px; color: #333; margin-bottom: 10px;">${note.feeling}</div>
+                    <div style="font-size: 12px; color: #999;">${note.timestamp}</div>
+                </div>
+            `;
+
+            const threadContent = document.getElementById('threadContent');
+            threadContent.innerHTML = '<h4 style="margin-bottom: 15px;">Replies:</h4>';
+            
+            if (note.replies && note.replies.length > 0) {
+                note.replies.forEach(reply => {
+                    if (reply.reports < 3) {
+                        threadContent.innerHTML += `
+                            <div class="reply">
+                                <div class="reply-content">${reply.text}</div>
+                                <div class="reply-meta">
+                                    <span>${reply.timestamp}</span>
+                                    <span class="report-count" onclick="reportReply('${noteId}', '${reply.id}')">
+                                        ${reply.reports > 0 ? `${reply.reports} reports • ` : ''}Report
+                                    </span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+            } else {
+                threadContent.innerHTML += '<p style="color: #999;">No replies yet. Be the first to reach out!</p>';
+            }
+
+            document.getElementById('threadModal').style.display = 'flex';
+        }
+
+        function addReply() {
+            const replyText = document.getElementById('replyInput').value.trim();
+            if (!replyText) return;
+
+            const note = notes.find(n => n.id == currentNoteId);
+            if (!note) return;
+
+            const reply = {
+                id: Date.now() + Math.random(),
+                text: replyText,
+                timestamp: new Date().toLocaleString(),
+                reports: 0
+            };
+
+            if (!note.replies) note.replies = [];
+            note.replies.push(reply);
+            
+            connections++;
+            updateStats();
+            
+            document.getElementById('replyInput').value = '';
+            openThread(currentNoteId);
+        }
+
+        function reportNote(noteId) {
+            const note = notes.find(n => n.id == noteId);
+            if (note) {
+                note.reports = (note.reports || 0) + 1;
+                if (note.reports >= 5) {
+                    notes = notes.filter(n => n.id != noteId);
+                    updateStats();
+                    updateHeatmap();
+                    alert('Note has been removed by the community.');
+                    location.reload();
+                } else {
+                    alert('Report submitted. The community will review this content.');
+                }
+            }
+        }
+
+        function reportReply(noteId, replyId) {
+            const note = notes.find(n => n.id == noteId);
+            if (note && note.replies) {
+                const reply = note.replies.find(r => r.id == replyId);
+                if (reply) {
+                    reply.reports = (reply.reports || 0) + 1;
+                    if (reply.reports >= 3) {
+                        note.replies = note.replies.filter(r => r.id != replyId);
+                        openThread(noteId);
+                    } else {
+                        openThread(noteId);
+                    }
+                }
+            }
+        }
+
+        function showRandomNote() {
+            if (notes.length === 0) return;
+            const randomNote = notes[Math.floor(Math.random() * notes.length)];
+            map.setView([randomNote.lat, randomNote.lng], 5);
+            
+            setTimeout(() => {
+                const marker = L.popup()
+                    .setLatLng([randomNote.lat, randomNote.lng])
+                    .setContent(createPopupContent(randomNote))
+                    .openOn(map);
+            }, 500);
+        }
+
+        function updateStats() {
+            document.getElementById('noteCount').textContent = notes.length;
+            document.getElementById('connectionCount').textContent = connections;
+        }
+
+        function updateHeatmap() {
+            heat.setLatLngs(heatData);
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function closeInstructions() {
+            document.getElementById('instructions').style.display = 'none';
+        }
+
+        // Close modals on escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal('newNoteModal');
+                closeModal('threadModal');
+            }
+        });
+
+        // Close instructions after 10 seconds
+        setTimeout(() => {
+            closeInstructions();
+        }, 10000);
+    </script>
+</body>
+</html>
