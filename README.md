@@ -10,9 +10,10 @@ Built for HackRice 15 - Rice University's hackathon for 2025.
 
 ## Images
 ---
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/1471491d-e5d0-4ba3-8087-87dce684587b" />
 
-![[Pasted image 20250921104232.png]]
+<img width="923" height="762" alt="image" src="https://github.com/user-attachments/assets/af180ac3-be18-4a98-914c-7563a9b2fe0e" />
 
-![[Pasted image 20250921104240.png]]
+<img width="1540" height="709" alt="image" src="https://github.com/user-attachments/assets/3156897a-c9cb-4af3-8979-9d7fe9f544a6" />
 
-![[Pasted image 20250921104257.png]]
+
